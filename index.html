@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EuroTrip 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:#f5f0e8; --ink:#1a1510; --rust:#b5541c;
+    --gold:#c9973a; --sage:#6b7c5e; --parch:#ede6d6;
+    --teal:#2a7c8a; --teal-light:#4aacbc;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Montserrat',Georgia,sans-serif;background:var(--cream);color:var(--ink);}
+
+  /* HEADER */
+  #hdr{background:var(--ink);color:var(--cream);padding:1.1rem 2rem 0.9rem;position:relative;overflow:hidden;}
+  #hdr::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;border:1px solid rgba(201,151,58,0.3);border-radius:50%;pointer-events:none;}
+  .hdr-eye{font-size:0.58rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--gold);margin-bottom:0.2rem;}
+  #hdr h1{font-family:'Cormorant Garamond',Georgia,serif;font-size:2.3rem;font-weight:300;line-height:1;letter-spacing:-0.02em;}
+  #hdr h1 em{font-style:italic;color:var(--gold);}
+  .hdr-meta{display:flex;gap:1.8rem;margin-top:0.45rem;flex-wrap:wrap;}
+  .hdr-meta span{font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;opacity:0.55;}
+  .hdr-meta strong{color:var(--gold);font-weight:500;}
+
+  /* STATS */
+  #stats{background:var(--ink);color:var(--cream);display:flex;border-top:1px solid rgba(201,151,58,0.2);}
+  .stat{flex:1;padding:0.45rem 0.4rem;text-align:center;border-right:1px solid rgba(255,255,255,0.07);}
+  .stat:last-child{border-right:none;}
+  .sv{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.25rem;font-weight:600;color:var(--gold);line-height:1;}
+  .sl{font-size:0.48rem;letter-spacing:0.15em;text-transform:uppercase;opacity:0.5;margin-top:0.08rem;}
+
+  /* CONTENT */
+  #content{display:flex;}
+
+  /* SIDEBAR */
+  #sidebar{width:300px;flex-shrink:0;background:var(--parch);border-right:1px solid rgba(26,21,16,0.1);display:flex;flex-direction:column;overflow:hidden;}
+  #sb-hdr{padding:0.85rem 1.3rem 0.65rem;border-bottom:1px solid rgba(26,21,16,0.08);flex-shrink:0;background:var(--parch);}
+  #sb-hdr p{font-size:0.56rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--sage);margin-bottom:0.12rem;}
+  #sb-hdr h2{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.1rem;font-weight:400;}
+  #stop-list{overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--gold) transparent;}
+  #stop-list::-webkit-scrollbar{width:3px;}
+  #stop-list::-webkit-scrollbar-thumb{background:var(--gold);border-radius:2px;}
+
+  /* CITY CARDS */
+  .card{padding:0.75rem 1.3rem;border-bottom:1px solid rgba(26,21,16,0.06);cursor:pointer;transition:background 0.15s;border-left:3px solid transparent;}
+  .card:hover{background:rgba(201,151,58,0.08);}
+  .card.active{background:rgba(201,151,58,0.13);border-left-color:var(--gold);}
+  .c-num{font-size:0.54rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:0.1rem;}
+  .c-city{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.1rem;font-weight:600;line-height:1.2;}
+  .c-cntry{font-size:0.58rem;text-transform:uppercase;letter-spacing:0.13em;color:var(--sage);margin-bottom:0.15rem;}
+  .c-dates{font-size:0.64rem;color:var(--rust);font-weight:500;}
+  .c-accom{font-size:0.59rem;color:var(--ink);opacity:0.6;margin-top:0.1rem;font-style:italic;}
+  .c-accom.tbd{color:var(--rust);opacity:0.8;font-style:normal;}
+  .c-accom.friend{color:var(--sage);opacity:0.85;font-style:italic;}
+  .c-trans{display:inline-block;font-size:0.55rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--sage);margin-top:0.25rem;background:rgba(107,124,94,0.12);padding:0.12rem 0.38rem;border-radius:2px;}
+
+  /* ACTIVITY LIST */
+  .act-list{background:rgba(42,124,138,0.06);border-left:2px solid var(--teal-light);margin:0;padding:0;}
+  .act-item{padding:0.45rem 1.3rem 0.45rem 1.5rem;border-bottom:1px solid rgba(42,124,138,0.1);cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:0.4rem;}
+  .act-item:last-child{border-bottom:none;}
+  .act-item:hover{background:rgba(42,124,138,0.12);}
+  .act-item.active{background:rgba(42,124,138,0.18);}
+  .act-dot{width:6px;height:6px;border-radius:50%;background:var(--teal-light);flex-shrink:0;}
+  .act-name{font-size:0.6rem;font-weight:500;color:var(--ink);line-height:1.3;flex:1;}
+  .act-dist{font-size:0.52rem;color:var(--teal);opacity:0.85;white-space:nowrap;}
+
+  /* MAP */
+  #map-wrap{position:relative;}
+  #map{position:absolute;top:0;left:0;}
+
+  /* LEGEND */
+  #legend{position:absolute;bottom:16px;right:16px;background:rgba(26,21,16,0.9);color:var(--cream);padding:0.75rem 1rem;border-radius:5px;font-size:0.6rem;z-index:1000;border:1px solid rgba(201,151,58,0.3);pointer-events:none;}
+  #legend h4{font-family:'Cormorant Garamond',Georgia,serif;font-size:0.8rem;color:var(--gold);margin-bottom:0.4rem;font-weight:600;}
+  .li{display:flex;align-items:center;gap:0.38rem;margin-bottom:0.25rem;text-transform:uppercase;letter-spacing:0.07em;}
+  .ld{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .ld.sq{border-radius:2px;}
+
+  /* POPUPS */
+  .leaflet-popup-content-wrapper{background:var(--ink)!important;color:var(--cream)!important;border-radius:5px!important;border:none!important;box-shadow:0 8px 28px rgba(0,0,0,0.5)!important;}
+  .leaflet-popup-tip{background:var(--ink)!important;}
+  .leaflet-popup-content{margin:12px 15px!important;font-family:'Montserrat',Georgia,sans-serif!important;min-width:220px;}
+  .pu-city{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.2rem;font-weight:600;color:var(--gold);margin-bottom:1px;}
+  .pu-sub{font-size:0.62rem;opacity:0.55;margin-bottom:5px;}
+  .pu-row{font-size:0.67rem;line-height:1.65;margin-bottom:1px;}
+  .pu-row b{color:var(--gold);font-weight:500;}
+  .pu-links{margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,0.12);display:flex;flex-direction:column;gap:4px;}
+  .pu-link{display:inline-flex;align-items:center;gap:5px;font-size:0.63rem;padding:4px 8px;border-radius:3px;text-decoration:none;font-weight:500;transition:opacity 0.15s;}
+  .pu-link:hover{opacity:0.8;}
+  .pu-link.maps{background:rgba(74,172,188,0.25);color:var(--teal-light);border:1px solid rgba(74,172,188,0.4);}
+  .pu-link.web{background:rgba(201,151,58,0.2);color:var(--gold);border:1px solid rgba(201,151,58,0.35);}
+  .pu-act-name{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.1rem;font-weight:600;color:var(--teal-light);margin-bottom:2px;}
+
+  /* MARKERS — city */
+  .cm{display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:var(--ink);border:2px solid var(--gold);border-radius:50%;color:var(--gold);font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,0.45);cursor:pointer;transition:transform 0.15s;}
+  .cm:hover{transform:scale(1.13);}
+  .cm.transit{background:#1b2535;border-color:#7a9cc4;color:#7a9cc4;}
+  .cm.friend{background:#2a3520;border-color:var(--sage);color:var(--sage);}
+  .cm.tbd{background:#2a1a10;border-color:var(--rust);color:var(--rust);}
+  /* MARKERS — activity */
+  .am{display:flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--teal);border:2px solid var(--teal-light);border-radius:4px;color:#fff;font-size:10px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,0.35);cursor:pointer;transition:transform 0.15s;}
+  .am:hover{transform:scale(1.18);}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div class="hdr-eye">ATL ✈ Europe ✈ ATL &nbsp;·&nbsp; April 17 – May 16, 2026</div>
+  <h1>Euro<em>Trip</em> 2026</h1>
+  <div class="hdr-meta">
+    <span>Origin <strong>Atlanta, GA</strong></span>
+    <span>Duration <strong>30 Days</strong></span>
+    <span>Countries <strong>Italy · Germany · Denmark · Scotland · Spain</strong></span>
+  </div>
+</div>
+
+<div id="stats">
+  <div class="stat"><div class="sv">9</div><div class="sl">Cities</div></div>
+  <div class="stat"><div class="sv">5</div><div class="sl">Countries</div></div>
+  <div class="stat"><div class="sv">30</div><div class="sl">Days</div></div>
+  <div class="stat"><div class="sv">22</div><div class="sl">Activities</div></div>
+  <div class="stat"><div class="sv">1</div><div class="sl">Match Day</div></div>
+</div>
+
+<div id="content">
+  <div id="sidebar">
+    <div id="sb-hdr">
+      <p>Your Itinerary · Apr 17 – May 16</p>
+      <h2>Click city or activity</h2>
+    </div>
+    <div id="stop-list"></div>
+  </div>
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="legend">
+      <h4>Legend</h4>
+      <div class="li"><div class="ld" style="background:#c9973a;border:2px solid #1a1510;"></div>Hotel / Hostel</div>
+      <div class="li"><div class="ld" style="background:#1b2535;border:2px solid #7a9cc4;"></div>Transit Point</div>
+      <div class="li"><div class="ld" style="background:#2a3520;border:2px solid #6b7c5e;"></div>Friend's Place</div>
+      <div class="li"><div class="ld" style="background:#2a1a10;border:2px solid #b5541c;"></div>Accom TBD</div>
+      <div class="li"><div class="ld sq" style="background:#2a7c8a;border:2px solid #4aacbc;"></div>Activity</div>
+      <div class="li"><div class="ld" style="background:#c9973a;opacity:0.45;"></div>Europe Route</div>
+      <div class="li"><div class="ld" style="background:#7a9cc4;opacity:0.7;"></div>Transatlantic Flight</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// CITY MARKERS are now pinned to the EXACT accommodation address from col D.
+// Distances are recalculated from that precise location.
+// Berlin = friend's house (approx city centre, no exact address).
+// Rome & Copenhagen = TBD, pinned to city centre.
+// ─────────────────────────────────────────────────────────────────────────────
+const STOPS = [
+  {
+    num:1, city:"Milan", country:"Italy", emoji:"✈️", type:"transit",
+    // Malpensa Airport Terminal 1
+    lat:45.6301, lng:8.7231,
+    accomName:"Malpensa Airport T1 — transit only",
+    accomType:"transit",
+    accomAddr:"Malpensa Airport, Terminal 1",
+    dates:"Apr 17–18 · Arrival & transit",
+    trans:"🚌 Bus: Malpensa → Turin Autostazione (2–4pm)",
+    mapsUrl:"https://maps.google.com/?q=Malpensa+Airport+Terminal+1",
+    activities:[]
+  },
+  {
+    num:2, city:"Turin", country:"Italy", emoji:"⚽", type:"main",
+    // NH Collection Torino Santo Stefano — Via Porta Palatina 19
+    lat:45.0741, lng:7.6838,
+    accomName:"NH Collection Torino Santo Stefano",
+    accomType:"hotel",
+    accomAddr:"Via Porta Palatina 19, 10122 Turin",
+    dates:"Apr 18–21 · 3 nights",
+    trans:"🚆 Italo Train → Florence",
+    mapsUrl:"https://maps.google.com/?q=NH+Collection+Torino+Santo+Stefano",
+    activities:[
+      { name:"Allianz Stadium",     emoji:"⚽", lat:45.1096, lng:7.6413, addr:"Corso Gaetano Scirea 50",        dist:"5.2 km", maps:"https://maps.google.com/?q=Allianz+Stadium+Turin",           web:"https://www.juventus.com/en/allianz-stadium" },
+      { name:"Museo Egizio",        emoji:"🏛️", lat:45.0684, lng:7.6844, addr:"Via Accademia delle Scienze 6", dist:"600 m",  maps:"https://maps.google.com/?q=Museo+Egizio+Turin",              web:"https://museoegizio.it/en/" },
+      { name:"Mole Antonelliana",   emoji:"🗼", lat:45.0691, lng:7.6933, addr:"Via Montebello 20",              dist:"900 m",  maps:"https://maps.google.com/?q=Mole+Antonelliana+Turin",         web:"https://www.museocinema.it/en/" },
+      { name:"Piazza San Carlo",    emoji:"🏛️", lat:45.0678, lng:7.6824, addr:"Piazza San Carlo",               dist:"700 m",  maps:"https://maps.google.com/?q=Piazza+San+Carlo+Turin",          web:"https://www.turismotorino.org/en" },
+      { name:"Palazzina di Caccia", emoji:"🏰", lat:44.9953, lng:7.6046, addr:"Piazza Principe Amedeo 7, Stupinigi", dist:"10.7 km", maps:"https://maps.google.com/?q=Palazzina+di+Caccia+Stupinigi", web:"https://www.ordinemauriziano.it/en/palazzina-di-caccia-di-stupinigi" }
+    ]
+  },
+  {
+    num:3, city:"Florence", country:"Italy", emoji:"🌸", type:"main",
+    // PLUS Florence — Via Santa Caterina D'Alessandria 15 (exact coords)
+    lat:43.78165, lng:11.25584,
+    accomName:"PLUS Florence",
+    accomType:"hotel",
+    accomAddr:"Via Santa Caterina D'Alessandria 15, 50129 Firenze",
+    dates:"Apr 21–26 · 5 nights",
+    trans:"🚆 Train → Siena",
+    mapsUrl:"https://maps.google.com/?q=PLUS+Florence+Via+Santa+Caterina+D+Alessandria+15",
+    activities:[
+      { name:"Giunti Odeon Cinema",    emoji:"📚", lat:43.7710, lng:11.2525, addr:"Piazza degli Strozzi, 50123",  dist:"1.2 km", maps:"https://maps.google.com/?q=Giunti+Odeon+Florence",      web:"https://www.giuntipunto.it/odeon" },
+      { name:"Uffizi Galleries",       emoji:"🎨", lat:43.7678, lng:11.2553, addr:"Piazzale degli Uffizi 6",      dist:"1.5 km", maps:"https://maps.google.com/?q=Uffizi+Gallery+Florence",    web:"https://www.uffizi.it/en/the-uffizi" },
+      { name:"Ponte Vecchio",          emoji:"🌉", lat:43.7679, lng:11.2531, addr:"Ponte Vecchio, 50125",         dist:"1.5 km", maps:"https://maps.google.com/?q=Ponte+Vecchio+Florence",     web:"https://www.firenzeturismo.it/en/ponte-vecchio.html" },
+      { name:"Florence Cathedral",     emoji:"⛪", lat:43.7731, lng:11.2560, addr:"Piazza del Duomo, 50122",      dist:"1.0 km", maps:"https://maps.google.com/?q=Florence+Cathedral+Duomo",   web:"https://www.ilgrandemuseodelduomo.it/en" }
+    ]
+  },
+  {
+    num:4, city:"Siena", country:"Italy", emoji:"🍷", type:"main",
+    // Grand Hotel Continental — Via Banchi di Sopra 85 (exact coords from search)
+    lat:43.3209, lng:11.3306,
+    accomName:"Grand Hotel Continental Siena",
+    accomType:"hotel",
+    accomAddr:"Via Banchi di Sopra 85, 53100 Siena",
+    dates:"Apr 26–27 · 1 night",
+    trans:"🚆 Train → Rome",
+    mapsUrl:"https://maps.google.com/?q=Grand+Hotel+Continental+Siena+Via+Banchi+di+Sopra",
+    activities:[
+      { name:"Piazza del Campo",   emoji:"🏟️", lat:43.3182, lng:11.3319, addr:"Il Campo, 53100 Siena",       dist:"300 m", maps:"https://maps.google.com/?q=Piazza+del+Campo+Siena",  web:"https://www.terresiena.it/en/art-towns/siena" },
+      { name:"Siena Cathedral",    emoji:"🕍", lat:43.3177, lng:11.3289, addr:"Piazza del Duomo 8, 53100",   dist:"400 m", maps:"https://maps.google.com/?q=Siena+Cathedral+Duomo",   web:"https://operaduomo.siena.it/en/" }
+    ]
+  },
+  {
+    num:5, city:"Rome", country:"Italy", emoji:"🏛️", type:"main",
+    // RomeHello — Via Torino 45, 00184 Roma (exact coords)
+    lat:41.90341, lng:12.49422,
+    accomName:"RomeHello Hostel",
+    accomType:"hotel",
+    accomAddr:"Via Torino 45, 00184 Roma RM",
+    dates:"Apr 27–30 · 3 nights",
+    trans:"✈️ Ryanair (FUZMPP) → Berlin",
+    mapsUrl:"https://maps.google.com/?q=RomeHello+Via+Torino+45+Rome",
+    activities:[
+      { name:"Colosseum",       emoji:"🏟️", lat:41.8902, lng:12.4922, addr:"Piazza del Colosseo 1, 00184",    dist:"1.5 km", maps:"https://maps.google.com/?q=Colosseum+Rome",        web:"https://colosseo.it/en/" },
+      { name:"Vatican Museums", emoji:"⛪", lat:41.9065, lng:12.4536, addr:"Viale Vaticano, Vatican City",    dist:"3.4 km", maps:"https://maps.google.com/?q=Vatican+Museums+Rome",   web:"https://www.museivaticani.va/content/museivaticani/en.html" },
+      { name:"Trevi Fountain",  emoji:"⛲", lat:41.9009, lng:12.4833, addr:"Piazza di Trevi, 00187 Roma",     dist:"900 m",  maps:"https://maps.google.com/?q=Trevi+Fountain+Rome",    web:"https://www.rome.net/trevi-fountain" }
+    ]
+  },
+  {
+    num:6, city:"Berlin", country:"Germany", emoji:"🐻", type:"main",
+    // Magi — friend's house, no exact address. Pinned to central Berlin.
+    lat:52.5200, lng:13.4050,
+    accomName:"Magi's place (friend)",
+    accomType:"friend",
+    accomAddr:"Friend's home — exact address private",
+    dates:"Apr 30 – May 4 · 4 nights",
+    trans:"✈️ EasyJet (U25261) → Copenhagen",
+    mapsUrl:"https://maps.google.com/?q=Berlin+Germany",
+    activities:[
+      { name:"Brandenburg Gate", emoji:"🧱", lat:52.5163, lng:13.3777, addr:"Pariser Platz, 10117 Berlin",        dist:"1.9 km", maps:"https://maps.google.com/?q=Brandenburg+Gate+Berlin",  web:"https://www.visitberlin.de/en/brandenburger-tor" },
+      { name:"Museum Island",    emoji:"🖼️", lat:52.5169, lng:13.4019, addr:"Museum Island, Berlin",              dist:"400 m",  maps:"https://maps.google.com/?q=Museum+Island+Berlin",    web:"https://www.smb.museum/en/museums-institutions/museumsinsel-berlin/home/" },
+      { name:"Tiergarten",       emoji:"🌿", lat:52.5142, lng:13.3592, addr:"Str. des 17. Juni, 10785 Berlin",    dist:"3.2 km", maps:"https://maps.google.com/?q=Tiergarten+Berlin",        web:"https://www.visitberlin.de/en/grosser-tiergarten" }
+    ]
+  },
+  {
+    num:7, city:"Copenhagen", country:"Denmark", emoji:"🧜", type:"main",
+    // Gemmas Alle 203, 2770 København (exact coords)
+    lat:55.62850, lng:12.60483,
+    accomName:"Gemmas Alle 203",
+    accomType:"hotel",
+    accomAddr:"Gemmas Alle 203, 2770 København, Denmark",
+    dates:"May 4–7 · 3 nights",
+    trans:"✈️ Flight → Edinburgh",
+    mapsUrl:"https://maps.google.com/?q=Gemmas+Alle+203+2770+Copenhagen",
+    activities:[
+      { name:"The Little Mermaid", emoji:"🧜", lat:55.6929, lng:12.5993, addr:"Langelinie, 2100 Copenhagen",        dist:"7.2 km", maps:"https://maps.google.com/?q=Little+Mermaid+Copenhagen",  web:"https://www.visitcopenhagen.com/copenhagen/planning/little-mermaid-gdk410911" },
+      { name:"Nyhavn Harbour",     emoji:"⚓", lat:55.6798, lng:12.5913, addr:"Nyhavn, Indre By, Copenhagen",       dist:"5.8 km", maps:"https://maps.google.com/?q=Nyhavn+Copenhagen",           web:"https://www.visitcopenhagen.com/copenhagen/planning/nyhavn-gdk410867" },
+      { name:"Tivoli Gardens",     emoji:"🎡", lat:55.6737, lng:12.5681, addr:"Vesterbrogade 3, 1630 Copenhagen",   dist:"5.5 km", maps:"https://maps.google.com/?q=Tivoli+Gardens+Copenhagen",  web:"https://www.tivoli.dk/en/" }
+    ]
+  },
+  {
+    num:8, city:"Edinburgh", country:"Scotland, UK", emoji:"🏴󠁧󠁢󠁳󠁣󠁴󠁿", type:"main",
+    // Premier Inn Falkirk East — Beancross Rd, Polmont FK2 0YS (exact coords)
+    lat:55.9960, lng:-3.7228,
+    accomName:"Premier Inn Falkirk East",
+    accomType:"hotel",
+    accomAddr:"Beancross Rd, Polmont, Falkirk FK2 0YS",
+    dates:"May 7–10 · 3 nights",
+    trans:"✈️ Flight 3209M → Madrid",
+    mapsUrl:"https://maps.google.com/?q=Premier+Inn+Falkirk+East+Beancross+Road+Polmont",
+    activities:[
+      { name:"Edinburgh Castle", emoji:"🏰", lat:55.9486, lng:-3.1999, addr:"Castlehill, Edinburgh EH1 2NG",      dist:"33 km drive", maps:"https://maps.google.com/?q=Edinburgh+Castle",        web:"https://www.edinburghcastle.scot/" },
+      { name:"The Royal Mile",   emoji:"🥃", lat:55.9501, lng:-3.1880, addr:"Royal Mile, Edinburgh EH1 1QS",      dist:"34 km drive", maps:"https://maps.google.com/?q=Royal+Mile+Edinburgh",   web:"https://www.visitscotland.com/info/towns-villages/the-royal-mile-p246691" },
+      { name:"Arthur's Seat",    emoji:"🌿", lat:55.9441, lng:-3.1618, addr:"Holyrood Park, Edinburgh EH15",      dist:"35 km drive", maps:"https://maps.google.com/?q=Arthurs+Seat+Edinburgh",  web:"https://www.historicenvironment.scot/visit-a-place/places/holyrood-park-and-arthurs-seat/" }
+    ]
+  },
+  {
+    num:9, city:"Madrid", country:"Spain", emoji:"💃", type:"main",
+    // OneFam Sungate Hostal — C. del Carmen 16 (exact coords)
+    lat:40.4187, lng:-3.7045,
+    accomName:"OneFam Sungate Hostal",
+    accomType:"hotel",
+    accomAddr:"C. del Carmen 16, 2nd floor, Centro, 28013 Madrid",
+    dates:"May 10–16 · 6 nights",
+    trans:"✈️ MAD → ATL (Return home May 16)",
+    mapsUrl:"https://maps.google.com/?q=Onefam+Sungate+Hostal+Calle+Carmen+16+Madrid",
+    activities:[
+      { name:"Museo del Prado",   emoji:"🎨", lat:40.4138, lng:-3.6921, addr:"Paseo del Prado, Retiro 28014",        dist:"1.2 km", maps:"https://maps.google.com/?q=Museo+del+Prado+Madrid",   web:"https://www.museodelprado.es/en" },
+      { name:"Royal Palace",      emoji:"👑", lat:40.4180, lng:-3.7143, addr:"Calle de Bailén, Centro 28071",        dist:"800 m",  maps:"https://maps.google.com/?q=Royal+Palace+Madrid",      web:"https://www.patrimonionacional.es/en/real-sitio/palacio-real-de-madrid" },
+      { name:"El Retiro Park",    emoji:"🌳", lat:40.4153, lng:-3.6835, addr:"Paseo de la Argentina, Retiro 28009",  dist:"1.8 km", maps:"https://maps.google.com/?q=Retiro+Park+Madrid",       web:"https://www.esmadrid.com/en/tourist-information/el-retiro-park" },
+      { name:"El Rastro Market",  emoji:"🛒", lat:40.4108, lng:-3.7071, addr:"Pl. de Cascorro 4, Centro 28005",      dist:"900 m",  maps:"https://maps.google.com/?q=El+Rastro+Madrid",         web:"https://www.esmadrid.com/en/tourist-information/rastro-de-madrid" }
+    ]
+  }
+];
+
+// ── LAYOUT ────────────────────────────────────────────────────────────
+function applyLayout() {
+  const hdrH   = document.getElementById('hdr').getBoundingClientRect().height;
+  const statsH = document.getElementById('stats').getBoundingClientRect().height;
+  const contentH = window.innerHeight - Math.round(hdrH + statsH);
+  const sidebarW = 300;
+  const mapW = window.innerWidth - sidebarW;
+
+  document.getElementById('content').style.height  = contentH + 'px';
+  document.getElementById('sidebar').style.height  = contentH + 'px';
+  document.getElementById('map-wrap').style.width  = mapW + 'px';
+  document.getElementById('map-wrap').style.height = contentH + 'px';
+  document.getElementById('map').style.width       = mapW + 'px';
+  document.getElementById('map').style.height      = contentH + 'px';
+
+  if (window._map) window._map.invalidateSize();
+}
+
+// ── MAIN ──────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function () {
+  applyLayout();
+
+  const map = L.map('map', { center:[48, 10], zoom:4 });
+  window._map = map;
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; OSM &copy; CARTO', subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+
+  // ── Atlanta origin/destination marker ───────────────────────────────
+  const ATL = [33.7490, -84.3880];
+  const malpensa = [45.6301, 8.7231];
+  const madridAccom = [40.4187, -3.7045];
+
+  // Curved flight arc helper (sine lift to simulate great-circle arc visually)
+  function flightArc(from, to, steps) {
+    const pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const lat = from[0] + (to[0] - from[0]) * t;
+      const lng = from[1] + (to[1] - from[1]) * t;
+      const arc = Math.sin(Math.PI * t) * 7;
+      pts.push([lat + arc, lng]);
+    }
+    return pts;
+  }
+
+  // Outbound: ATL → Milan/Malpensa
+  L.polyline(flightArc(ATL, malpensa, 80), {
+    color:'#7a9cc4', weight:2, opacity:0.5, dashArray:'5 6'
+  }).addTo(map);
+
+  // Return: Madrid → ATL
+  L.polyline(flightArc(madridAccom, ATL, 80), {
+    color:'#7a9cc4', weight:2, opacity:0.5, dashArray:'5 6'
+  }).addTo(map);
+
+  // ATL marker — distinct gold ring style
+  const atlIcon = L.divIcon({
+    html:`<div class="cm" style="width:38px;height:38px;font-size:9px;font-weight:800;letter-spacing:-0.5px;">ATL</div>`,
+    className:'', iconSize:[38,38], iconAnchor:[19,19], popupAnchor:[0,-22]
+  });
+  const atlMarker = L.marker(ATL, { icon:atlIcon }).addTo(map);
+  atlMarker.bindPopup(`
+    <div class="pu-city">✈️ Atlanta, GA</div>
+    <div class="pu-sub">USA · Origin &amp; Destination</div>
+    <div class="pu-row"><b>📅 Depart:</b> Apr 17 · DL174 · 6:20PM → 9:25AM+1</div>
+    <div class="pu-row"><b>📅 Return:</b> May 16 · MAD → ATL</div>
+    <div class="pu-row"><b>🎫 Confirmation:</b> F8LT4V</div>
+    <div class="pu-links">
+      <a class="pu-link maps" href="https://maps.google.com/?q=Hartsfield+Jackson+Atlanta+International+Airport" target="_blank">📍 Hartsfield-Jackson Airport</a>
+    </div>
+  `, { maxWidth:290 });
+
+  // ── Europe route line ────────────────────────────────────────────────
+  const routeCoords = STOPS.map(s => [s.lat, s.lng]);
+  L.polyline(routeCoords, { color:'#c9973a', weight:2.5, opacity:0.6, dashArray:'9 7' }).addTo(map);
+
+  const stopList = document.getElementById('stop-list');
+
+  // ── ATL sidebar card ──
+  const atlCard = document.createElement("div");
+  atlCard.className = "card";
+  atlCard.innerHTML = `
+    <div class="c-num">Origin 2708Fe0f</div>
+    <div class="c-city">Atlanta, GA</div>
+    <div class="c-cntry">USA � Hartsfield-Jackson</div>
+    <div class="c-dates">D83dDcc5 Depart Apr 17 � Return May 16</div>
+    <div class="c-accom">DL174 � Confirmation: F8LT4V</div>
+    <div class="c-trans">2708Fe0f ATL 2192 MXP (outbound) � MAD 2192 ATL (return)</div>
+  `;
+  atlCard.addEventListener("click", () => {
+    document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
+    atlCard.classList.add("active");
+    map.flyTo(ATL, 5, { animate:true, duration:1.2 });
+    setTimeout(() => atlMarker.openPopup(), 1100);
+  });
+  stopList.appendChild(atlCard);
+
+  STOPS.forEach((stop) => {
+    // ── City / accommodation marker ──
+    const cls = stop.accomType === 'transit' ? 'transit'
+              : stop.accomType === 'friend'  ? 'friend'
+              : stop.accomType === 'tbd'     ? 'tbd'
+              : '';
+
+    const cityIcon = L.divIcon({
+      html:`<div class="cm ${cls}">${stop.num}</div>`,
+      className:'', iconSize:[32,32], iconAnchor:[16,16], popupAnchor:[0,-18]
+    });
+    const cityMarker = L.marker([stop.lat, stop.lng], { icon:cityIcon }).addTo(map);
+
+    const accomLine = stop.accomType === 'tbd'
+      ? `<span style="color:#d4895a">${stop.accomName}</span>`
+      : stop.accomType === 'friend'
+      ? `<span style="color:#8aab7a">${stop.accomName}</span>`
+      : stop.accomName;
+
+    cityMarker.bindPopup(`
+      <div class="pu-city">${stop.emoji} ${stop.city}</div>
+      <div class="pu-sub">${stop.country}</div>
+      <div class="pu-row"><b>📅 Dates:</b> ${stop.dates}</div>
+      <div class="pu-row"><b>🏨 Stay:</b> ${accomLine}</div>
+      <div class="pu-row"><b>📍 Address:</b> ${stop.accomAddr}</div>
+      <div class="pu-row"><b>🚀 Onward:</b> ${stop.trans}</div>
+      <div class="pu-links">
+        <a class="pu-link maps" href="${stop.mapsUrl}" target="_blank">📍 Open in Google Maps</a>
+      </div>
+    `, { maxWidth:300 });
+
+    // ── Sidebar card ──
+    const isFriend = stop.accomType === 'friend';
+    const isTbd    = stop.accomType === 'tbd';
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="c-num">Stop ${stop.num} &nbsp;${stop.emoji}</div>
+      <div class="c-city">${stop.city}</div>
+      <div class="c-cntry">${stop.country}</div>
+      <div class="c-dates">📅 ${stop.dates}</div>
+      <div class="c-accom${isTbd?' tbd':isFriend?' friend':''}">🏨 ${stop.accomName}</div>
+      <div class="c-trans">${stop.trans}</div>
+    `;
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.act-list')) return;
+      document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      map.flyTo([stop.lat, stop.lng], 14, { animate:true, duration:1.0 });
+      setTimeout(() => cityMarker.openPopup(), 900);
+    });
+
+    // ── Activity markers + sidebar rows ──
+    if (stop.activities.length > 0) {
+      const actListEl = document.createElement('div');
+      actListEl.className = 'act-list';
+
+      stop.activities.forEach((act) => {
+        const actIcon = L.divIcon({
+          html:`<div class="am">${act.emoji}</div>`,
+          className:'', iconSize:[22,22], iconAnchor:[11,11], popupAnchor:[0,-14]
+        });
+        const actMarker = L.marker([act.lat, act.lng], { icon:actIcon }).addTo(map);
+
+        actMarker.bindPopup(`
+          <div class="pu-act-name">${act.emoji} ${act.name}</div>
+          <div class="pu-sub">${stop.city}, ${stop.country}</div>
+          <div class="pu-row"><b>📍 Address:</b> ${act.addr}</div>
+          <div class="pu-row"><b>🚶 From ${stop.accomType==='friend'?'Magi\'s place':stop.accomName.split(' ').slice(0,3).join(' ')}:</b> ${act.dist}</div>
+          <div class="pu-links">
+            <a class="pu-link maps" href="${act.maps}" target="_blank">📍 Google Maps</a>
+            <a class="pu-link web"  href="${act.web}"  target="_blank">🌐 Official Site</a>
+          </div>
+        `, { maxWidth:285 });
+
+        const actItem = document.createElement('div');
+        actItem.className = 'act-item';
+        actItem.innerHTML = `
+          <div class="act-dot"></div>
+          <span class="act-name">${act.emoji} ${act.name}</span>
+          <span class="act-dist">${act.dist}</span>
+        `;
+        actItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.querySelectorAll('.act-item').forEach(a => a.classList.remove('active'));
+          actItem.classList.add('active');
+          map.flyTo([act.lat, act.lng], 15, { animate:true, duration:0.9 });
+          setTimeout(() => actMarker.openPopup(), 800);
+        });
+        actListEl.appendChild(actItem);
+      });
+
+      card.appendChild(actListEl);
+    }
+
+    stopList.appendChild(card);
+  });
+
+  // Fit map to accommodation coords (excluding Milan/Malpensa which skews the view)
+  const fitCoords = STOPS.map(s => [s.lat, s.lng]);
+  // Include Atlanta in the initial view
+  const allCoords = [ATL, ...fitCoords];
+  map.fitBounds(L.latLngBounds(allCoords), { padding:[40, 40] });
+});
+
+window.addEventListener('resize', applyLayout);
+</script>
+</body>
+</html>
