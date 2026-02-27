@@ -33,7 +33,7 @@
   .sv{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.25rem;font-weight:600;color:var(--gold);line-height:1;}
   .sl{font-size:0.48rem;letter-spacing:0.15em;text-transform:uppercase;opacity:0.5;margin-top:0.08rem;}
 
-  /* CONTENT */
+  /* CONTENT — desktop side-by-side, mobile stacked */
   #content{display:flex;}
 
   /* SIDEBAR */
@@ -41,13 +41,13 @@
   #sb-hdr{padding:0.85rem 1.3rem 0.65rem;border-bottom:1px solid rgba(26,21,16,0.08);flex-shrink:0;background:var(--parch);}
   #sb-hdr p{font-size:0.56rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--sage);margin-bottom:0.12rem;}
   #sb-hdr h2{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.1rem;font-weight:400;}
-  #stop-list{overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--gold) transparent;}
+  #stop-list{overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--gold) transparent;-webkit-overflow-scrolling:touch;}
   #stop-list::-webkit-scrollbar{width:3px;}
   #stop-list::-webkit-scrollbar-thumb{background:var(--gold);border-radius:2px;}
 
   /* CITY CARDS */
   .card{padding:0.75rem 1.3rem;border-bottom:1px solid rgba(26,21,16,0.06);cursor:pointer;transition:background 0.15s;border-left:3px solid transparent;}
-  .card:hover{background:rgba(201,151,58,0.08);}
+  .card:hover,.card:active{background:rgba(201,151,58,0.08);}
   .card.active{background:rgba(201,151,58,0.13);border-left-color:var(--gold);}
   .c-num{font-size:0.54rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:0.1rem;}
   .c-city{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.1rem;font-weight:600;line-height:1.2;}
@@ -62,11 +62,59 @@
   .act-list{background:rgba(42,124,138,0.06);border-left:2px solid var(--teal-light);margin:0;padding:0;}
   .act-item{padding:0.45rem 1.3rem 0.45rem 1.5rem;border-bottom:1px solid rgba(42,124,138,0.1);cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:0.4rem;}
   .act-item:last-child{border-bottom:none;}
-  .act-item:hover{background:rgba(42,124,138,0.12);}
+  .act-item:hover,.act-item:active{background:rgba(42,124,138,0.12);}
   .act-item.active{background:rgba(42,124,138,0.18);}
   .act-dot{width:6px;height:6px;border-radius:50%;background:var(--teal-light);flex-shrink:0;}
   .act-name{font-size:0.6rem;font-weight:500;color:var(--ink);line-height:1.3;flex:1;}
   .act-dist{font-size:0.52rem;color:var(--teal);opacity:0.85;white-space:nowrap;}
+
+  /* ── MOBILE (max 768px) ─────────────────────────────────────────── */
+  @media(max-width:768px){
+    /* Compact header */
+    #hdr{padding:0.65rem 1rem 0.55rem;}
+    #hdr h1{font-size:1.55rem;}
+    .hdr-eye{font-size:0.5rem;letter-spacing:0.18em;}
+    .hdr-meta{gap:0.7rem;margin-top:0.25rem;}
+    .hdr-meta span{font-size:0.5rem;}
+
+    /* Tighter stats bar */
+    .sv{font-size:1rem;}
+    .sl{font-size:0.4rem;}
+    .stat{padding:0.3rem 0.15rem;}
+
+    /* Stack: map on top, itinerary below */
+    #content{flex-direction:column;}
+    #sidebar{width:100%;border-right:none;border-top:2px solid rgba(201,151,58,0.3);}
+    #sb-hdr{padding:0.7rem 1rem 0.55rem;}
+    #sb-hdr h2{font-size:0.95rem;}
+
+    /* Larger, finger-friendly cards */
+    .card{padding:1rem 1rem;}
+    .c-city{font-size:1.2rem;}
+    .c-cntry{font-size:0.62rem;}
+    .c-dates{font-size:0.72rem;}
+    .c-accom{font-size:0.67rem;}
+    .c-trans{font-size:0.6rem;padding:0.2rem 0.5rem;margin-top:0.3rem;}
+
+    /* Larger activity rows */
+    .act-item{padding:0.65rem 1rem 0.65rem 1.3rem;min-height:44px;}
+    .act-name{font-size:0.7rem;}
+    .act-dist{font-size:0.6rem;}
+
+    /* Smaller, less obtrusive legend */
+    #legend{bottom:8px;right:8px;padding:0.5rem 0.65rem;font-size:0.52rem;}
+    #legend h4{font-size:0.7rem;margin-bottom:0.3rem;}
+    .li{margin-bottom:0.18rem;}
+    .ld{width:8px;height:8px;}
+
+    /* Bigger popup text for thumbs */
+    .leaflet-popup-content{min-width:200px!important;margin:10px 13px!important;}
+    .pu-city{font-size:1.15rem;}
+    .pu-sub{font-size:0.65rem;}
+    .pu-row{font-size:0.72rem;line-height:1.75;}
+    .pu-link{font-size:0.68rem;padding:6px 10px;}
+    .pu-act-name{font-size:1.05rem;}
+  }
 
   /* MAP */
   #map-wrap{position:relative;}
@@ -305,16 +353,35 @@ const STOPS = [
 function applyLayout() {
   const hdrH   = document.getElementById('hdr').getBoundingClientRect().height;
   const statsH = document.getElementById('stats').getBoundingClientRect().height;
-  const contentH = window.innerHeight - Math.round(hdrH + statsH);
-  const sidebarW = 300;
-  const mapW = window.innerWidth - sidebarW;
+  const isMobile = window.innerWidth <= 768;
 
-  document.getElementById('content').style.height  = contentH + 'px';
-  document.getElementById('sidebar').style.height  = contentH + 'px';
-  document.getElementById('map-wrap').style.width  = mapW + 'px';
-  document.getElementById('map-wrap').style.height = contentH + 'px';
-  document.getElementById('map').style.width       = mapW + 'px';
-  document.getElementById('map').style.height      = contentH + 'px';
+  if (isMobile) {
+    // Mobile: map takes 50% of viewport height, list scrolls below
+    const mapH   = Math.round(window.innerHeight * 0.50);
+    const listH  = Math.round(window.innerHeight * 0.45);
+    const fullW  = window.innerWidth;
+
+    document.getElementById('content').style.height    = 'auto';
+    document.getElementById('sidebar').style.height    = listH + 'px';
+    document.getElementById('sidebar').style.width     = fullW + 'px';
+    document.getElementById('map-wrap').style.width    = fullW + 'px';
+    document.getElementById('map-wrap').style.height   = mapH + 'px';
+    document.getElementById('map').style.width         = fullW + 'px';
+    document.getElementById('map').style.height        = mapH + 'px';
+  } else {
+    // Desktop: sidebar left, map fills remainder
+    const contentH = window.innerHeight - Math.round(hdrH + statsH);
+    const sidebarW = 300;
+    const mapW     = window.innerWidth - sidebarW;
+
+    document.getElementById('content').style.height    = contentH + 'px';
+    document.getElementById('sidebar').style.height    = contentH + 'px';
+    document.getElementById('sidebar').style.width     = sidebarW + 'px';
+    document.getElementById('map-wrap').style.width    = mapW + 'px';
+    document.getElementById('map-wrap').style.height   = contentH + 'px';
+    document.getElementById('map').style.width         = mapW + 'px';
+    document.getElementById('map').style.height        = contentH + 'px';
+  }
 
   if (window._map) window._map.invalidateSize();
 }
@@ -387,10 +454,10 @@ window.addEventListener('DOMContentLoaded', function () {
   atlCard.innerHTML = `
     <div class="c-num">Origin 2708Fe0f</div>
     <div class="c-city">Atlanta, GA</div>
-    <div class="c-cntry">USA � Hartsfield-Jackson</div>
-    <div class="c-dates">D83dDcc5 Depart Apr 17 � Return May 16</div>
-    <div class="c-accom">DL174 � Confirmation: F8LT4V</div>
-    <div class="c-trans">2708Fe0f ATL 2192 MXP (outbound) � MAD 2192 ATL (return)</div>
+    <div class="c-cntry">USA � Hartsfield-Jackson</div>
+    <div class="c-dates">D83dDcc5 Depart Apr 17 � Return May 16</div>
+    <div class="c-accom">DL174 � Confirmation: F8LT4V</div>
+    <div class="c-trans">2708Fe0f ATL 2192 MXP (outbound) � MAD 2192 ATL (return)</div>
   `;
   atlCard.addEventListener("click", () => {
     document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
@@ -508,4 +575,3 @@ window.addEventListener('DOMContentLoaded', function () {
 window.addEventListener('resize', applyLayout);
 </script>
 </body>
-</html>
